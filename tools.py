@@ -99,6 +99,20 @@ def get_all_cpoints(waterschap):
 
     return result
 
+def get_zmin(crosssection):
+    zs = [p[2] for p in crosssection]
+    return min(zs)
+
+def get_zmax(crosssection):
+    zs = [p[2] for p in crosssection]
+    return max(zs)
+
+def get_relative_height(z, crosssection):
+    """Return the relative height (z) of the point where zmin=0.0 and zmax=1.0"""
+    zmin = get_zmin(crosssection)
+    zmax = get_zmax(crosssection)
+    return (z - zmin) / (zmax - zmin)
+
 if __name__=="__main__":
     sls = get_all_surfacelines("rijnland")
     cps = get_all_cpoints("rijnland")

@@ -1,5 +1,6 @@
 import glob
 import pandas as pd
+import math
 
 CPOINT_CHECK_COLCOUNT = 55
 CPOINT_NAMES = {
@@ -53,9 +54,13 @@ def get_all_surfacelines(waterschap):
                 id = args[0]
                 xs = [float(x) for x in args[col_x0::3] if len(x.strip())>0]
                 zs = [float(z) for z in args[col_z0::3] if len(z.strip())>0]
-                cid = [-1]*len(xs)
-                points = list(zip(cid,xs,zs))
-                result[id] = points
+
+                if xs[0] == 0.0:
+                    cid = [-1]*len(xs)
+                    points = list(zip(cid,xs,zs))
+                    result[id] = points
+                else:
+                    print("Dwarsprofiel %s begint niet op x=0 en wordt geskipped" % id)
     else:
         print("Dit waterschap is nog niet bekend.")
         return result
@@ -107,12 +112,46 @@ def get_zmax(crosssection):
     zs = [p[2] for p in crosssection]
     return max(zs)
 
+def get_z_at(crosssection, xloc):
+    xs = [p[1] for p in crosssection]
+    zs = [p[2] for p in crosssection]
+    if xloc<0 or xloc>xs[-1]: return 1e-9
+
+    for i in range(1, len(xs)):
+        x1 = xs[i-1]
+        x2 = xs[i]
+        if x1 <= xloc <= x2:
+            return zs[i-1] + (xloc - x1) / (x2 - x1) * (zs[i] - zs[i-1])
+
+    print("Hier zou ik niet mogen komen")
+    print("crosssection:", crosssection)
+    print("xloc:", xloc)
+
+
+
 def get_relative_height(z, crosssection):
     """Return the relative height (z) of the point where zmin=0.0 and zmax=1.0"""
     zmin = get_zmin(crosssection)
     zmax = get_zmax(crosssection)
     return (z - zmin) / (zmax - zmin)
 
+def get_slope(p, dp, xoffset):
+    """Return the angle from point p (px, pz) to point (px - xoffset, z(px-xoffset))"""
+    x1, z1 = p[1], p[2]
+    x2 = x1 + xoffset
+    z2 = get_z_at(dp, x2)
+    if z2 == -1e9:
+        return 1e9
+    else:
+        alpha = math.atan2(z2-z1, x2-x1) * (180. / math.pi)
+        if(alpha < 0): alpha = 360. + alpha
+        return alpha
+
+
 if __name__=="__main__":
     sls = get_all_surfacelines("rijnland")
     cps = get_all_cpoints("rijnland")
+
+    dp = sls['024_042_00002']
+    print(get_z_at(dp, 110))
+    print(get_slope(dp[3], dp, -2))
